@@ -1,0 +1,2 @@
+-author("Khanh Hua").
+-module(gb).
