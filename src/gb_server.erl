@@ -10,7 +10,7 @@
          terminate/2,
          code_change/3]).
 
--export([start/0, stop/0, add_guest/1, list_guests/0]).
+-export([start/0, stop/0, add_guest/1, list_guests/0, create_message/1, fetch_messages/0]).
 
 -define(SERVER, ?MODULE).
 
@@ -30,6 +30,11 @@ add_guest(Guest) ->
 list_guests() ->
   gen_server:call(?SERVER, {list}).
 
+create_message(Message) ->
+  gen_server:call(?SERVER, {message, Message}).
+
+fetch_messages() ->
+  gen_server:call(?SERVER, {fetch_messages}).
 %%% ==================================
 %%% gen_server callbacks
 %%% ==================================
@@ -38,8 +43,7 @@ init(_Args) ->
   {ok, #{guests => []}}.
 
 handle_call(Req, From, State) ->
-  erlang:display("[handle_call]"),
-  erlang:display(Req),
+  io:format("[handle_call] Handling request: ~w~n", [Req]),
   
   case Req of
     {add, Guest} -> 
@@ -49,6 +53,8 @@ handle_call(Req, From, State) ->
     {list} ->
       List = list_guests(State),
       {reply, {ok, List}, State}
+    ;
+    _ -> {reply, not_implemented, State}
   end.
 
 handle_cast(Req, State) ->

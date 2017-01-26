@@ -1,0 +1,20 @@
+%%%-------------------------------------------------------------------
+%%% @author khanhhua
+%%% @copyright (C) 2016, Fatman Designer
+%%% @doc
+%%%
+%%% @end
+%%% Created : 31. Dec 2016 10:57
+%%%-------------------------------------------------------------------
+{application, gb, [
+  {description, "Guestbook Application"},
+  {vsn, "0.1.0"},
+  {registered, []},
+  {applications, [
+    kernel,
+    stdlib,
+    cowboy
+  ]},
+  {mod, {gb, []}},
+  {env, []}
+]}.
