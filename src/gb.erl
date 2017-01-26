@@ -12,7 +12,8 @@
 %% application callbacks 
 
 start(_Type, _Args) ->
-  gb_server:start().
+  gb_server:start(),
+  gb_www_sup:start_link().
 
 stop(_State) ->
   ok.

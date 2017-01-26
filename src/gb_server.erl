@@ -19,6 +19,7 @@
 %%% ==================================
 
 start() ->
+  io:format("Starting guestbook internal server..."),
   gen_server:start({local, ?SERVER}, ?MODULE, [], []).
 
 stop() ->

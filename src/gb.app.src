@@ -13,7 +13,8 @@
   {applications, [
     kernel,
     stdlib,
-    cowboy
+    cowboy,
+    gb
   ]},
   {mod, {gb, []}},
   {env, []}
