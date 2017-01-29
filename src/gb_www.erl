@@ -3,10 +3,22 @@
 
 -export([start_link/0]).
 
+-export([init/3, handle/2, terminate/3]).
+-export([
+    query_guests/1,
+    get_guest/2,
+    create_guest/1,
+    query_messages/1,
+    get_message/2,
+    create_message/1
+]).
+
 start_link() ->
   Dispatch = cowboy_router:compile([
     {'_', [
       {"/", cowboy_static, {priv_file, gb, "www/index.html"}},
+      {"/rest/guests/[:id]", ?MODULE, [{resource, guests}]},
+      {"/rest/messages/[:id]", ?MODULE, [{resource, messages}]},
       {"/[...]", cowboy_static, {priv_dir, gb, "www", [
         {mimetypes, cow_mimetypes, all},
         {dir_handler, directory_handler}
@@ -20,3 +32,99 @@ start_link() ->
     ]),
 
   {ok, Pid}.
+
+init(Protocol, Req, Opts) ->
+  Resource = proplists:get_value(resource, Opts),
+  {Id, Req} = cowboy_req:binding(id, Req, undefined),
+  {Method, Req} = cowboy_req:method(Req),
+
+  if
+    Method =:= <<"GET">> ->
+      case Resource of
+        guests -> if
+                    Id =/= undefined -> {ok, Req, {Resource, get_guest, [Req, Id]}}
+                    ;
+                    true -> {ok, Req, {Resource, query_guests, [Req]}}
+                  end
+        ;
+        messages -> if
+                      Id =/= undefined -> {ok, Req, {Resource, get_message, [Req, Id]}}
+                      ;
+                      true -> {ok, Req, {Resource, query_messages, [Req]}}
+                    end
+      end
+    ;
+    Method =:= <<"POST">> ->
+      case Resource of
+        guests -> {ok, Req, {Resource, create_guest, [Req]}}
+        ;
+        messages -> {ok, Req, {Resource, create_message, [Req]}}
+      end
+  end.
+
+handle(Req, {Resource, Action, Args}) ->
+  Req2 = case apply(?MODULE, Action, Args) of
+    {ok, Body} ->
+      erlang:display(Body),
+      cowboy_req:reply(200,
+        [
+          {<<"content-type">>, <<"application/json">>}
+        ],
+        Body,
+        Req)
+    ;
+    {error, Reason} ->
+      cowboy_req:reply(400,
+        [
+          {<<"content-type">>, <<"application/json">>}
+        ],
+        Reason,
+        Req)
+  end,
+
+  {ok, Req2, no_state}.
+
+terminate(_Reason, Req, State) -> ok.
+
+-spec(query_guests(Req::map()) -> {ok, [Guest::map()]} | {error, Reason::list()}).
+query_guests(Req) ->
+  {ok, Guests} = gb_server:list_guests(),
+  List = lists:map(
+    fun ({guest, Id, Name, Contact}) ->
+      #{
+        id => Id,
+        name => Name,
+        contact => Contact
+      }
+    end,
+    Guests
+  ),
+  {ok, jsx:encode(List)}.
+
+get_guest(Id, Req) ->
+  {ok, <<"ok">>}.
+
+create_guest(Req) ->
+  {ok, Data, _} = cowboy_req:body(Req),
+  Guest = jsx:decode(Data, [return_maps]),
+  #{
+    <<"name">> := Name,
+    <<"contact">> := Contact
+  } = Guest,
+
+  {ok, {guest, Id, Name, Contact}} = gb_server:add_guest({guest, Name, Contact}),
+
+  {ok, jsx:encode(#{
+    id => Id,
+    name => Name,
+    contact => Contact
+  })}.
+
+query_messages(Req) ->
+  {ok, <<"ok">>}.
+
+get_message(Id, Req) ->
+  {ok, <<"ok">>}.
+
+create_message(Req) ->
+  {ok, <<"ok">>}.

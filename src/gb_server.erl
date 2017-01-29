@@ -41,15 +41,20 @@ fetch_messages() ->
 %%% ==================================
 
 init(_Args) ->
-  {ok, #{guests => []}}.
+  HashidContext = hashids:new([{salt, "SALTYASSALT"}]),
+
+  {ok, #{
+    hashid => HashidContext,
+    guests => []
+  }}.
 
 handle_call(Req, From, State) ->
   io:format("[handle_call] Handling request: ~w~n", [Req]),
   
   case Req of
-    {add, Guest} -> 
-      UpdatedState = add_guest(Guest, State),
-      {reply, {ok, Guest}, UpdatedState}
+    {add, Guest} ->
+      {ok, UpdatedGuest, UpdatedState} = add_guest(Guest, State),
+      {reply, {ok, UpdatedGuest}, UpdatedState}
     ;
     {list} ->
       List = list_guests(State),
@@ -77,10 +82,15 @@ code_change(OldVsn, State, Extra) ->
 %%% ===================================
 
 add_guest(Guest, State) ->
-  #{guests := Guests} = State,
-  UpdatedGuests = [Guest|Guests],
+  #{guests := Guests,
+    hashid := HashidContext} = State,
+  {guest, Name, Contact} = Guest,
+
+  Id = list_to_binary(hashids:encode(HashidContext, trunc(rand:uniform() * 1000000000))),
+
+  UpdatedGuests = [{guest, Id, Name, Contact} | Guests],
   UpdatedState = State#{ guests := UpdatedGuests },
-  UpdatedState.
+  {ok, {guest, Id, Name, Contact}, UpdatedState}.
 
 list_guests(State) ->
   #{guests := Guests} = State,
