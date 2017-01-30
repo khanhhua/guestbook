@@ -122,7 +122,9 @@ create_guest(Req) ->
 
 query_messages(Req) ->
   {ok, Messages} = gb_server:list_messages(),
-  List = lists:map(
+  {ok, Guests} = gb_server:list_guests(),
+
+  MessageList = lists:map(
     fun ({message, MessageId, GuestId, Text}) ->
       #{id       => MessageId,
         guest_id => GuestId,
@@ -130,7 +132,16 @@ query_messages(Req) ->
     end,
     Messages
   ),
-  {ok, jsx:encode(List)}.
+  GuestList = lists:map(
+    fun ({guest, UserId, Username, _}) ->
+      #{id       => UserId,
+        username => Username}
+    end,
+    Guests
+  ),
+
+  {ok, jsx:encode(#{messages => MessageList,
+                    guests => GuestList})}.
 
 get_message(Id, Req) ->
   {ok, <<"ok">>}.
