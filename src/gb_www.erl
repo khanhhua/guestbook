@@ -121,10 +121,41 @@ create_guest(Req) ->
   })}.
 
 query_messages(Req) ->
-  {ok, <<"ok">>}.
+  {ok, Messages} = gb_server:list_messages(),
+  List = lists:map(
+    fun ({message, MessageId, GuestId, Text}) ->
+      #{id       => MessageId,
+        guest_id => GuestId,
+        text     => Text}
+    end,
+    Messages
+  ),
+  {ok, jsx:encode(List)}.
 
 get_message(Id, Req) ->
   {ok, <<"ok">>}.
 
 create_message(Req) ->
-  {ok, <<"ok">>}.
+  {ok, Data, _} = cowboy_req:body(Req),
+  GuestInfo = jsx:decode(Data, [return_maps]),
+  #{
+    <<"name">> := Name,
+    <<"contact">> := Contact,
+    <<"message">> := Text
+  } = GuestInfo,
+
+  {ok, {guest, GuestId, Name, Contact}} = gb_server:add_guest({guest, Name, Contact}),
+  {ok, {message, MessageId, GuestId, Text}} = gb_server:create_message({message, GuestId, Text}),
+
+  {ok, jsx:encode(#{
+    guest => #{
+      id => GuestId,
+      name => Name,
+      contact => Contact
+    },
+    message => #{
+      id => MessageId,
+      guest => GuestId,
+      text => Text
+    }
+  })}.

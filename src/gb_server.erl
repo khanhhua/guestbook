@@ -10,7 +10,7 @@
          terminate/2,
          code_change/3]).
 
--export([start/0, stop/0, add_guest/1, list_guests/0, create_message/1, fetch_messages/0]).
+-export([start/0, stop/0, add_guest/1, list_guests/0, create_message/1, list_messages/0]).
 
 -define(SERVER, ?MODULE).
 
@@ -32,10 +32,10 @@ list_guests() ->
   gen_server:call(?SERVER, {list}).
 
 create_message(Message) ->
-  gen_server:call(?SERVER, {message, Message}).
+  gen_server:call(?SERVER, {create_message, Message}).
 
-fetch_messages() ->
-  gen_server:call(?SERVER, {fetch_messages}).
+list_messages() ->
+  gen_server:call(?SERVER, {list_messages}).
 %%% ==================================
 %%% gen_server callbacks
 %%% ==================================
@@ -45,7 +45,8 @@ init(_Args) ->
 
   {ok, #{
     hashid => HashidContext,
-    guests => []
+    guests => [],
+    messages => []
   }}.
 
 handle_call(Req, From, State) ->
@@ -58,6 +59,14 @@ handle_call(Req, From, State) ->
     ;
     {list} ->
       List = list_guests(State),
+      {reply, {ok, List}, State}
+    ;
+    {create_message, Message} ->
+      {ok, UpdatedMessage, UpdatedState} = create_message(Message, State),
+      {reply, {ok, UpdatedMessage}, UpdatedState}
+    ;
+    {list_messages} ->
+      List = list_messages(State),
       {reply, {ok, List}, State}
     ;
     _ -> {reply, not_implemented, State}
@@ -96,3 +105,18 @@ list_guests(State) ->
   #{guests := Guests} = State,
 
   Guests.
+
+create_message(Message, State) ->
+  #{messages := Messages,
+    hashid   := HashidContext} = State,
+  {message, GuestId, Text} = Message,
+
+  Id = list_to_binary(hashids:encode(HashidContext, trunc(rand:uniform() * 1000000000))),
+  UpdatedMessages = [{message, Id, GuestId, Text} | Messages],
+  UpdatedState = State#{ messages := UpdatedMessages },
+  {ok, {message, Id, GuestId, Text}, UpdatedState}.
+
+list_messages(State) ->
+  #{messages := Messages} = State,
+
+  Messages.

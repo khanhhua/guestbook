@@ -3,11 +3,62 @@
 <head>
   <meta charset="UTF-8">
   <title>Guest Book Application</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.2.7/semantic.min.css">
   <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
-  <div class="container">
-    <h1>Welcome to My World!</h1>
+<div class="ui inverted vertical masthead center aligned segment">
+
+  <div class="ui container">
+    <div class="ui large secondary inverted pointing menu">
+      <a class="toc item">
+        <i class="sidebar icon"></i>
+      </a>
+      <a class="active item">Home</a>
+      <a class="item">About author</a>
+      <a class="item">Fork me!</a>
+    </div>
   </div>
+
+  <div class="ui text container">
+    <h1 class="ui inverted header">
+      Guest Book
+    </h1>
+    <h2>Powered by Cowboy <i>(Erlang)</i></h2>
+    <div class="ui huge primary button" onclick="$('#modalContact').modal('show')">Leave your contact <i class="right arrow icon"></i></div>
+  </div>
+
+</div>
+
+<div class="ui modal" id="modalContact">
+  <div class="header">Leave your contact</div>
+  <div class="content">
+    <form class="ui massive form" id="formContact" method="post">
+      <div class="two fields">
+        <div class="field">
+          <label>Name</label>
+          <input placeholder="Your Name" type="text" name="username">
+        </div>
+        <div class="field">
+          <label>Contact</label>
+          <input placeholder="Contact (email, phone...)" type="text" name="contact">
+        </div>
+      </div>
+      <div class="one fields">
+        <div class="sixteen wide field">
+          <label>Message</label>
+          <textarea name="message" rows="2"></textarea>
+        </div>
+      </div>
+    </form>
+  </div>
+  <div class="actions">
+    <div class="ui send button">Send</div>
+    <div class="ui cancel button">Cancel</div>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.2.7/semantic.min.js"></script>
+<script src="/js/script.js"></script>
 </body>
 </html>
