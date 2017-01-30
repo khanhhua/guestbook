@@ -20,6 +20,9 @@
       $('#modalContact').modal('hide');
     }
   });
+  $('.button.leave-message').on('click', function () {
+    $('#modalContact').modal('show');
+  });
 
   $(renderMessageList);
 
