@@ -48,7 +48,9 @@
         return templateFn(item);
       });
 
-      $messageList.prepend($html);
+      $html.forEach(function (item) {
+        $(item).prependTo($messageList).fadeIn();
+      });
     }
   }
 
