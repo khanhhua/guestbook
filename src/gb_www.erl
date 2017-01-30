@@ -14,9 +14,12 @@
 ]).
 
 start_link() ->
+  sse_clients = ets:new('sse_clients', [bag, public, named_table]),
+
   Dispatch = cowboy_router:compile([
     {'_', [
       {"/", cowboy_static, {priv_file, gb, "www/index.html"}},
+      {"/sse", gb_sse, []},
       {"/rest/guests/[:id]", ?MODULE, [{resource, guests}]},
       {"/rest/messages/[:id]", ?MODULE, [{resource, messages}]},
       {"/[...]", cowboy_static, {priv_dir, gb, "www", [
@@ -63,7 +66,7 @@ init(Protocol, Req, Opts) ->
   end.
 
 handle(Req, {Resource, Action, Args}) ->
-  Req2 = case apply(?MODULE, Action, Args) of
+  {ok, Req2} = case apply(?MODULE, Action, Args) of
     {ok, Body} ->
       erlang:display(Body),
       cowboy_req:reply(200,
@@ -125,10 +128,11 @@ query_messages(Req) ->
   {ok, Guests} = gb_server:list_guests(),
 
   MessageList = lists:map(
-    fun ({message, MessageId, GuestId, Text}) ->
+    fun ({message, MessageId, GuestId, Text, CreatedAt}) ->
       #{id       => MessageId,
         guest_id => GuestId,
-        text     => Text}
+        text     => Text,
+        created_at => iso_8601_fmt(CreatedAt)}
     end,
     Messages
   ),
@@ -156,7 +160,16 @@ create_message(Req) ->
   } = GuestInfo,
 
   {ok, {guest, GuestId, Name, Contact}} = gb_server:add_guest({guest, Name, Contact}),
-  {ok, {message, MessageId, GuestId, Text}} = gb_server:create_message({message, GuestId, Text}),
+  {ok, {message, MessageId, GuestId, Text, CreatedAt}} = gb_server:create_message({message, GuestId, Text}),
+
+%%  Broadcast to sse clients
+  ClientProcessList = ets:tab2list(sse_clients),
+  lists:foreach(
+    fun ({ClientPid, _}) ->
+      Pid = list_to_pid(ClientPid),
+      Pid! {update, calendar:universal_time()}
+    end,
+    ClientProcessList),
 
   {ok, jsx:encode(#{
     guest => #{
@@ -167,6 +180,12 @@ create_message(Req) ->
     message => #{
       id => MessageId,
       guest => GuestId,
-      text => Text
+      text => Text,
+      created_at => iso_8601_fmt(CreatedAt)
     }
   })}.
+
+iso_8601_fmt(DateTime) ->
+  {{Year,Month,Day},{Hour,Min,Sec}} = DateTime,
+  io_lib:format("~4.10.0B-~2.10.0B-~2.10.0B ~2.10.0B:~2.10.0B:~2.10.0B",
+    [Year, Month, Day, Hour, Min, Sec]).

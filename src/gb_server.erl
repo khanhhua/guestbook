@@ -10,7 +10,9 @@
          terminate/2,
          code_change/3]).
 
--export([start/0, stop/0, add_guest/1, list_guests/0, create_message/1, list_messages/0]).
+-export([start/0, stop/0, add_guest/1, list_guests/0, create_message/1,
+  list_messages/0,
+  list_messages/2]).
 
 -define(SERVER, ?MODULE).
 
@@ -34,8 +36,13 @@ list_guests() ->
 create_message(Message) ->
   gen_server:call(?SERVER, {create_message, Message}).
 
+-spec(list_messages() -> {ok, [map()]}).
 list_messages() ->
   gen_server:call(?SERVER, {list_messages}).
+
+-spec(list_messages(Condition :: term(), Limit :: integer()) -> {ok, [map()]}).
+list_messages(Condition, Limit) ->
+  gen_server:call(?SERVER, {list_messages, Condition}).
 %%% ==================================
 %%% gen_server callbacks
 %%% ==================================
@@ -68,6 +75,11 @@ handle_call(Req, From, State) ->
     {list_messages} ->
       List = list_messages(State),
       {reply, {ok, List}, State}
+    ;
+    {list_messages, Condition} when is_function(Condition) ->
+      List = list_messages(State),
+      FilteredList = lists:filter(Condition, List),
+      {reply, {ok, FilteredList}, State}
     ;
     _ -> {reply, not_implemented, State}
   end.
@@ -112,9 +124,10 @@ create_message(Message, State) ->
   {message, GuestId, Text} = Message,
 
   Id = list_to_binary(hashids:encode(HashidContext, trunc(rand:uniform() * 1000000000))),
-  UpdatedMessages = [{message, Id, GuestId, Text} | Messages],
+  NewMessage = {message, Id, GuestId, Text, calendar:universal_time()},
+  UpdatedMessages = [NewMessage | Messages],
   UpdatedState = State#{ messages := UpdatedMessages },
-  {ok, {message, Id, GuestId, Text}, UpdatedState}.
+  {ok, NewMessage, UpdatedState}.
 
 list_messages(State) ->
   #{messages := Messages} = State,

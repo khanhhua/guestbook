@@ -27,27 +27,50 @@
   $(renderMessageList);
 
   function renderMessageList () {
+    var templateFn;
+    var $messageList;
+    var timer;
+
     $.get('/partials/message.item.html').then(function (template) {
       console.log(template);
 
-      var templateFn = _.template(template);
-      syncMessages().then(function (data) {
-        var $messageList = $('.message-list');
+      templateFn = _.template(template);
+      $messageList = $('.message-list');
 
-        var $html = _.map(data.messages, function (item) {
-          item.username = (_.find(data.guests, function (x) {
-            return x.id === item.guest_id;
-          })).username;
-          return templateFn(item);
-        });
-        $messageList.prepend($html);
+      syncMessages().then(render).then(function () {
+        connect(render);
       });
-    })
+    });
+
+    function render(data) {
+      var $html = _.map(data.messages, function (item) {
+        item.username = item.guest_id;
+        return templateFn(item);
+      });
+
+      $messageList.prepend($html);
+    }
   }
 
   function syncMessages () {
     return $.get('/rest/messages').then(function (data) {
       return data;
+    });
+  }
+
+  function connect (render) {
+    var eventSource = new EventSource('/sse');
+    eventSource.addEventListener('heartbeat', function () {
+      console.info('[hearbeat] Life is good');
+    });
+
+    eventSource.addEventListener('change', function (e) {
+      var data = {};
+      try {
+        data.messages = JSON.parse(e.data);
+        render(data);
+      }
+      catch (e) {}
     });
   }
 })(jQuery);
