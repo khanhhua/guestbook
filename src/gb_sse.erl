@@ -59,7 +59,7 @@ terminate(Reason, Req, State) ->
 %% Internal
 create_chunked_update(ReferenceTime) ->
   {ok, Messages} = gb_server:list_messages(
-    fun ({message, _Id, _GuestId, Text, CreatedAt}) ->
+    fun ({message, _Id, _GuestId, _GuestName, Text, CreatedAt}) ->
       io:format("[create_chunked_update] Now:~w Text:~s  At:~w~n", [ReferenceTime, Text, CreatedAt]),
       case calendar:time_difference(CreatedAt, ReferenceTime) of
         {0, {0,0,0}} -> true
@@ -72,9 +72,10 @@ create_chunked_update(ReferenceTime) ->
     100
   ),
   List = lists:map(
-    fun ({message, Id, GuestId, Text, CreatedAt}) ->
+    fun ({message, Id, GuestId, GuestName, Text, CreatedAt}) ->
       #{id        => Id,
         guest_id  => GuestId,
+        guest_name=> GuestName,
         text      => Text,
         created_at=> CreatedAt}
     end,

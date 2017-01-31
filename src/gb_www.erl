@@ -128,9 +128,10 @@ query_messages(Req) ->
   {ok, Guests} = gb_server:list_guests(),
 
   MessageList = lists:map(
-    fun ({message, MessageId, GuestId, Text, CreatedAt}) ->
+    fun ({message, MessageId, GuestId, GuestName, Text, CreatedAt}) ->
       #{id       => MessageId,
         guest_id => GuestId,
+        guest_name => GuestName,
         text     => Text,
         created_at => iso_8601_fmt(CreatedAt)}
     end,
@@ -178,14 +179,14 @@ create_message(Req) ->
       contact => Contact
     },
     message => #{
-      id => MessageId,
-      guest => GuestId,
-      text => Text,
-      created_at => iso_8601_fmt(CreatedAt)
+      id         => MessageId,
+      guest_id   => GuestId,
+      text       => Text,
+      created_at => list_to_binary(iso_8601_fmt(CreatedAt))
     }
   })}.
 
 iso_8601_fmt(DateTime) ->
   {{Year,Month,Day},{Hour,Min,Sec}} = DateTime,
-  io_lib:format("~4.10.0B-~2.10.0B-~2.10.0B ~2.10.0B:~2.10.0B:~2.10.0B",
+  io_lib:format("~4.10.0B-~2.10.0B-~2.10.0BT~2.10.0B:~2.10.0B:~2.10.0BZ",
     [Year, Month, Day, Hour, Min, Sec]).

@@ -44,7 +44,7 @@
 
     function render(data) {
       var $html = _.map(data.messages, function (item) {
-        item.username = item.guest_id;
+        item.username = item.guest_name;
         return templateFn(item);
       });
 

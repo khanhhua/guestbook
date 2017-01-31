@@ -107,11 +107,20 @@ add_guest(Guest, State) ->
     hashid := HashidContext} = State,
   {guest, Name, Contact} = Guest,
 
-  Id = list_to_binary(hashids:encode(HashidContext, trunc(rand:uniform() * 1000000000))),
-
-  UpdatedGuests = [{guest, Id, Name, Contact} | Guests],
-  UpdatedState = State#{ guests := UpdatedGuests },
-  {ok, {guest, Id, Name, Contact}, UpdatedState}.
+  case lists:filter(
+    fun ({guest, _Id, GName, GContact}) ->
+      Name =:= GName andalso Contact =:= GContact
+    end,
+    Guests) of
+    [] ->
+      Id = list_to_binary(hashids:encode(HashidContext, trunc(rand:uniform() * 1000000000))),
+      UpdatedGuests = [{guest, Id, Name, Contact} | Guests],
+      UpdatedState = State#{ guests := UpdatedGuests },
+      {ok, {guest, Id, Name, Contact}, UpdatedState}
+    ;
+    [{guest, Id, Name, Contact}] ->
+      {ok, {guest, Id, Name, Contact}, State}
+  end.
 
 list_guests(State) ->
   #{guests := Guests} = State,
@@ -130,6 +139,12 @@ create_message(Message, State) ->
   {ok, NewMessage, UpdatedState}.
 
 list_messages(State) ->
-  #{messages := Messages} = State,
+  #{guests   := Guests,
+    messages := Messages} = State,
 
-  Messages.
+  lists:map(
+    fun ({message, Id, GuestId, Text, CreatedAt}) ->
+      {guest, GuestId, GuestName, _} = lists:keyfind(GuestId, 2, Guests),
+      {message, Id, GuestId, GuestName, Text, CreatedAt}
+    end,
+    Messages).
