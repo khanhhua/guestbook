@@ -74,5 +74,9 @@
       }
       catch (e) {}
     });
+
+    eventSource.addEventListener('presence', function (e) {
+      $('#online-count').text(e.data);
+    });
   }
 })(jQuery);

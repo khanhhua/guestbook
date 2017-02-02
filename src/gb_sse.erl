@@ -27,17 +27,28 @@ handle(Req, State) ->
   erlang:display(Chunk),
   cowboy_req:chunk(Chunk, Req2),
 
+  broadcast_presence(),
+
   handle_loop(Req2, #{now => Now}).
 
 handle_loop(Req, State) ->
   receive
     shutdown -> {ok, Req, State}
     ;
+    {presence, Count} ->
+      io:format("[handle_loop] Updating connected sse with presence count ~w~n", [Count]),
+
+      PresenceChunk = create_presence_chunk(Count),
+      cowboy_req:chunk(PresenceChunk, Req),
+
+      handle_loop(Req, State)
+    ;
     {update, ReferenceTime} ->
       io:format("[handle_loop] Updating connected sse with reference time ~w~n", [ReferenceTime]),
 
       Chunk = create_chunked_update(ReferenceTime),
       cowboy_req:chunk(Chunk, Req),
+
       handle_loop(Req, State#{ now := ReferenceTime})
   after 5000 ->
     case heartbeat(Req) of
@@ -54,6 +65,8 @@ terminate(Reason, Req, State) ->
 
   Pid = pid_to_list(self()),
   catch ets:match_delete(sse_clients, {Pid, '_'}),
+  broadcast_presence(),
+
   ok.
 
 %% Internal
@@ -83,7 +96,23 @@ create_chunked_update(ReferenceTime) ->
   Data = jsx:encode(List),
   ["event: change\n", "data: ", Data, "\n\n"].
 
+create_presence_chunk(Count) ->
+  io:format("[create_presence_chunk] Presence count ~w~n", [Count]),
+
+  ["event: presence\n", "data: ", integer_to_binary(Count), "\n\n"].
+
 heartbeat(Req) ->
   io:format("Heartbeat...~n"),
   Chunk = ["event: heartbeat\n", "data: ok\n", "\n"],
   cowboy_req:chunk(Chunk, Req).
+
+broadcast_presence() ->
+  ClientProcessList = ets:tab2list(sse_clients),
+  Count = length(ClientProcessList),
+  lists:foreach(
+    fun ({ClientPid, _}) ->
+      Pid = list_to_pid(ClientPid),
+      Pid! {presence, Count}
+    end,
+    ClientProcessList),
+  ok.
