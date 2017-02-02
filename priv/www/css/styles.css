@@ -11,3 +11,11 @@
 
     display: none;
   }
+
+.fading-out {
+  transition: all 1s !important;
+  -webkit-transform: translateY(-2em);
+  transform: translateY(-2em);
+
+  opacity: 0;
+}

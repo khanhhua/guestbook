@@ -76,7 +76,20 @@
     });
 
     eventSource.addEventListener('presence', function (e) {
-      $('#online-count').text(e.data);
+      var $onlineCount = $('#online-count');
+      var $output = $('#online-count-output');
+
+      var $clone = $onlineCount.clone();
+      $clone.removeAttr('id');
+      $onlineCount.after($clone.css('position', 'absolute'));
+
+      $output.text(e.data);
+      setTimeout(function () {
+        $clone.addClass('fading-out');
+      }, 0);
+      setTimeout(function () {
+        $clone.remove();
+      }, 1000);
     });
   }
 })(jQuery);
